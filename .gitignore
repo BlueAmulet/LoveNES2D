@@ -1,0 +1,7 @@
+# ROMS
+src/*.rom
+src/*.nes
+src/*.zip
+# FCEUX .deb garbage
+src/*.deb
+
