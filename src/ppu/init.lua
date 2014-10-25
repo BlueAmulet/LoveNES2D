@@ -149,6 +149,22 @@ local function writeCtrl(address,value)
 	end
 end
 
+local function drawCHR(addr,x,y,pal)
+	local p1 = palette[NES.pbus.readByte(pal)]
+	local p2 = palette[NES.pbus.readByte(pal+1)]
+	local p3 = palette[NES.pbus.readByte(pal+2)]
+	for i=0, 7 do
+		for n=0, 7 do
+			--c = ((chr[addr+i] & (1 << n)) >> n) | ((chr[addr+i+8] & (1 << n)) >> (n-1))
+			local c = bit.bor(bit.rshift(bit.band(NES.pbus.readByte(addr+i),bit.lshift(1,n)),n),bit.rshift(bit.band(NES.pbus.readByte(addr+i+8),bit.lshift(1,n)),n-1))
+			if c ~= 0 then
+				love.graphics.setColor(c == 1 and p1 or c == 2 and p2 or p3)
+				love.graphics.point((7.5-n)+x,i+y+0.5)
+			end
+		end
+	end
+end
+
 NES.ppu = {
 	run = function()
 		local lX = (_ppu.lastcycle*3)%341
@@ -159,17 +175,61 @@ NES.ppu = {
 		
 		if _ppu.lastcycle > 2273 and NES.cycles <= 2273 then -- VBlank start
 			vbstart = true
+			if _ppu.ctrl.nmi ~= 0 then
+				-- TODO: Generate interrupt
+			end
 		end
 		if _ppu.lastcycle <= 2273 and NES.cycles > 2273 then -- VBlank ended
 			vbstart = false
 		end
 		_ppu.lastcycle = NES.cycles
 	end,
+	draw = function()
+		love.graphics.setColor(palette[NES.pbus.readByte(0x3F00)])
+		love.graphics.rectangle("fill",0,0,256,240)
+		for i = 63,0,-1 do -- Sprites draw backwards
+			local base = i*4
+			if OAMRam[base] < 0xEF then
+				-- TODO: Horizontal/Vertical flipping
+				if bit.band(OAMRam[base+2],32) == 32 then -- Behind BG
+					if _ppu.ctrl.spritesize == 0 then -- 8x8 sprites
+						drawCHR((OAMRam[base+1]*16)+_ppu.ctrl.spta,OAMRam[base+3],OAMRam[base]+1,(OAMRam[base+2]%4)+0x3F11)
+					else -- 8x16 sprites
+						local tile = (math.floor(OAMRam[base+1]/2)*8)+((OAMRam[base+1]%2)*4096)
+						-- TODO: 8x16 sprites
+					end
+				end
+			end
+		end
+		for y = 0,29 do
+			for x = 0,31 do
+				local amx = x%2
+				local amy = y%2
+				local attr = bit.band(bit.rshift(NES.ppu.VRam[math.floor(0x3C0+((y/2)*8)+(x/2))],amy == 0 and (amx == 0 and 0 or 2) or (amx == 0 and 4 or 6)),0x3)
+				drawCHR((NES.ppu.VRam[(y*32)+x]*16)+_ppu.ctrl.bpta,x*8,y*8,(attr*4)+0x3F01)
+			end
+		end
+		for i = 63,0,-1 do -- Sprites draw backwards
+			local base = i*4
+			if OAMRam[base] < 0xEF then
+				-- TODO: Horizontal/Vertical flipping
+				if bit.band(OAMRam[base+2],32) == 0 then -- Infront of BG
+					if _ppu.ctrl.spritesize == 0 then -- 8x8 sprites
+						drawCHR((OAMRam[base+1]*16)+_ppu.ctrl.spta,OAMRam[base+3],OAMRam[base]+1,(OAMRam[base+2]%4)+0x3F11)
+					else -- 8x16 sprites
+						local tile = (math.floor(OAMRam[base+1]/2)*8)+((OAMRam[base+1]%2)*4096)
+						-- TODO: 8x16 sprites
+					end
+				end
+			end
+		end
+		love.graphics.setColor(255, 255, 255, 255)
+	end,
 	reset = function()
+		-- TODO: Reset stuff
 	end,
 	ppu = _ppu,
 	VRam = VRam,
-	palette = palette,
 }
 
 -- Register ROM in bus
