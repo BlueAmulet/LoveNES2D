@@ -103,8 +103,8 @@ local function writeCtrl(address,value)
 		_ppu.ctrl.xscroll    = bit.band(value,  1)
 		_ppu.ctrl.yscroll    = bit.band(value,  2)
 		_ppu.ctrl.increment  = bit.band(value,  4)
-		_ppu.ctrl.spta       = bit.band(value,  8)
-		_ppu.ctrl.bpta       = bit.band(value, 16)
+		_ppu.ctrl.spta       = bit.band(value,  8) * 512
+		_ppu.ctrl.bpta       = bit.band(value, 16) * 256
 		_ppu.ctrl.spritesize = bit.band(value, 32)
 		_ppu.ctrl.mode       = bit.band(value, 64)
 		_ppu.ctrl.nmi        = bit.band(value,128)

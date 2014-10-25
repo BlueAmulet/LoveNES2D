@@ -60,7 +60,6 @@ local function drawCHR(addr,x,y,pal)
 end
 
 function love.draw()
-	love.graphics.translate(0.5,0.5)
 	love.graphics.setColor(255,255,255)
 	local y = 10
 	love.graphics.print("Frame #" .. framecount .. " at " .. os.date(),10,y) y=y+40
@@ -69,17 +68,16 @@ function love.draw()
 	love.graphics.print("Y: " .. string.format("%02X",NES.cpu.cpu.registers.Y),10,y) y=y+20
 	love.graphics.print("SP: " .. string.format("$01%02X",NES.cpu.cpu.registers.SP),10,y) y=y+20
 	love.graphics.print("PC: " .. string.format("$%04X",NES.cpu.cpu.registers.PC),10,y) y=y+20
-	local by = y
 	
-	love.graphics.translate(0, 128)
+	love.graphics.translate(8.5, y + 0.5)
 	love.graphics.setColor(NES.ppu.palette[NES.pbus.readByte(0x3F00)])
-	love.graphics.rectangle("fill",0,0,240,256)
+	love.graphics.rectangle("fill",0,0,256,240)
 	for y = 0,29 do
 		for x = 0,31 do
 			local amx = x%2
 			local amy = y%2
 			local attr = bit.band(bit.rshift(NES.ppu.VRam[math.floor(0x3C0+((y/2)*8)+(x/2))],amy == 0 and (amx == 0 and 0 or 2) or (amx == 0 and 4 or 6)),0x3)
-			drawCHR(NES.ppu.VRam[(y*32)+x]*16,x*8,y*8,(attr*4)+0x3F01)
+			drawCHR((NES.ppu.VRam[(y*32)+x]*16)+NES.ppu.ppu.ctrl.bpta,x*8,y*8,(attr*4)+0x3F01)
 		end
 	end
 end
