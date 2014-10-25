@@ -193,7 +193,7 @@ NES.ppu = {
 				-- TODO: Horizontal/Vertical flipping
 				if bit.band(OAMRam[base+2],32) == 32 then -- Behind BG
 					if _ppu.ctrl.spritesize == 0 then -- 8x8 sprites
-						drawCHR((OAMRam[base+1]*16)+_ppu.ctrl.spta,OAMRam[base+3],OAMRam[base]+1,(OAMRam[base+2]%4)+0x3F11)
+						drawCHR((OAMRam[base+1]*16)+_ppu.ctrl.spta,OAMRam[base+3],OAMRam[base]+1,(bit.band(OAMRam[base+2],0x3)*4)+0x3F11)
 					else -- 8x16 sprites
 						local tile = (math.floor(OAMRam[base+1]/2)*8)+((OAMRam[base+1]%2)*4096)
 						-- TODO: 8x16 sprites
@@ -221,7 +221,7 @@ NES.ppu = {
 				-- TODO: Horizontal/Vertical flipping
 				if bit.band(OAMRam[base+2],32) == 0 then -- Infront of BG
 					if _ppu.ctrl.spritesize == 0 then -- 8x8 sprites
-						drawCHR((OAMRam[base+1]*16)+_ppu.ctrl.spta,OAMRam[base+3],OAMRam[base]+1,(OAMRam[base+2]%4)+0x3F11)
+						drawCHR((OAMRam[base+1]*16)+_ppu.ctrl.spta,OAMRam[base+3],OAMRam[base]+1,(bit.band(OAMRam[base+2],0x3)*4)+0x3F11)
 					else -- 8x16 sprites
 						local tile = (math.floor(OAMRam[base+1]/2)*8)+((OAMRam[base+1]%2)*4096)
 						-- TODO: 8x16 sprites
