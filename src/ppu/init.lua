@@ -156,7 +156,7 @@ local function drawCHR(addr,x,y,pal,hflip,vflip)
 	for i=0, 7 do
 		for n=0, 7 do
 			--c = ((chr[addr+i] & (1 << n)) >> n) | ((chr[addr+i+8] & (1 << n)) >> (n-1))
-			local c = bit.bor(bit.rshift(bit.band(NES.pbus.readByte(addr+i),bit.lshift(1,n)),n),bit.rshift(bit.band(NES.pbus.readByte(addr+i+8),bit.lshift(1,n)),n-1))
+			local c = bit.band(bit.rshift(NES.pbus.readByte(addr+i),n),1)+(n > 0 and bit.band(bit.rshift(NES.pbus.readByte(addr+i+8),n-1),2) or bit.band(bit.lshift(NES.pbus.readByte(addr+i+8),1),2))
 			if c ~= 0 then
 				love.graphics.setColor(c == 1 and p1 or c == 2 and p2 or p3)
 				local sx = hflip and 0.5+n or 7.5-n
@@ -192,10 +192,9 @@ NES.ppu = {
 		for i = 63,0,-1 do -- Sprites draw backwards
 			local base = i*4
 			if OAMRam[base] < 0xEF then
-				-- TODO: Horizontal/Vertical flipping
 				if bit.band(OAMRam[base+2],32) == 32 then -- Behind BG
 					if _ppu.ctrl.spritesize == 0 then -- 8x8 sprites
-						drawCHR((OAMRam[base+1]*16)+_ppu.ctrl.spta,OAMRam[base+3],OAMRam[base]+1,(bit.band(OAMRam[base+2],0x3)*4)+0x3F11,bit.band(OAMRam[base+2],64)>0,bit.band(OAMRam[base+2],128)>0)
+						drawCHR((OAMRam[base+1]*16)+_ppu.ctrl.spta,OAMRam[base+3],OAMRam[base]+1,((OAMRam[base+2]%4)*4)+0x3F11,bit.band(OAMRam[base+2],64)>0,bit.band(OAMRam[base+2],128)>0)
 					else -- 8x16 sprites
 						local tile = (math.floor(OAMRam[base+1]/2)*8)+((OAMRam[base+1]%2)*4096)
 						-- TODO: 8x16 sprites
@@ -219,10 +218,9 @@ NES.ppu = {
 		for i = 63,0,-1 do -- Sprites draw backwards
 			local base = i*4
 			if OAMRam[base] < 0xEF then
-				-- TODO: Horizontal/Vertical flipping
 				if bit.band(OAMRam[base+2],32) == 0 then -- Infront of BG
 					if _ppu.ctrl.spritesize == 0 then -- 8x8 sprites
-						drawCHR((OAMRam[base+1]*16)+_ppu.ctrl.spta,OAMRam[base+3],OAMRam[base]+1,(bit.band(OAMRam[base+2],0x3)*4)+0x3F11,bit.band(OAMRam[base+2],64)>0,bit.band(OAMRam[base+2],128)>0)
+						drawCHR((OAMRam[base+1]*16)+_ppu.ctrl.spta,OAMRam[base+3],OAMRam[base]+1,((OAMRam[base+2]%4)*4)+0x3F11,bit.band(OAMRam[base+2],64)>0,bit.band(OAMRam[base+2],128)>0)
 					else -- 8x16 sprites
 						local tile = (math.floor(OAMRam[base+1]/2)*8)+((OAMRam[base+1]%2)*4096)
 						print("Warning, 8x16 sprite")
