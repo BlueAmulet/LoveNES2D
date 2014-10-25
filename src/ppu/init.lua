@@ -203,10 +203,16 @@ NES.ppu = {
 		end
 		for y = 0,29 do
 			for x = 0,31 do
-				local amx = x%2
-				local amy = y%2
-				local attr = bit.band(bit.rshift(NES.ppu.VRam[math.floor(0x3C0+((y/2)*8)+(x/2))],amy == 0 and (amx == 0 and 0 or 2) or (amx == 0 and 4 or 6)),0x3)
-				drawCHR((NES.ppu.VRam[(y*32)+x]*16)+_ppu.ctrl.bpta,x*8,y*8,(attr*4)+0x3F01)
+				local atx = math.floor(x/4)
+				local aty = math.floor(y/4)
+				local amx = math.floor((x-(atx*4))/2)
+				local amy = math.floor((y-(aty*4))/2)
+				local atb = 0x3C0
+				local atr = NES.ppu.VRam[atb+(aty*8)+atx]
+				local sa = amy == 0 and (amx == 0 and 0 or 2) or (amx == 0 and 4 or 6)
+				local attr = bit.band(bit.rshift(atr,sa),0x3)
+				print(x,y,atx,aty,amx,amy)
+				drawCHR((NES.ppu.VRam[(y*32)+x]*16)+NES.ppu.ppu.ctrl.bpta,x*8,y*8,(attr*4)+0x3F01)
 			end
 		end
 		for i = 63,0,-1 do -- Sprites draw backwards
