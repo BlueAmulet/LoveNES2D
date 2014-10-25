@@ -149,7 +149,7 @@ local function writeCtrl(address,value)
 	end
 end
 
-local function drawCHR(addr,x,y,pal)
+local function drawCHR(addr,x,y,pal,hflip,vflip)
 	local p1 = palette[NES.pbus.readByte(pal)]
 	local p2 = palette[NES.pbus.readByte(pal+1)]
 	local p3 = palette[NES.pbus.readByte(pal+2)]
@@ -159,7 +159,9 @@ local function drawCHR(addr,x,y,pal)
 			local c = bit.bor(bit.rshift(bit.band(NES.pbus.readByte(addr+i),bit.lshift(1,n)),n),bit.rshift(bit.band(NES.pbus.readByte(addr+i+8),bit.lshift(1,n)),n-1))
 			if c ~= 0 then
 				love.graphics.setColor(c == 1 and p1 or c == 2 and p2 or p3)
-				love.graphics.point((7.5-n)+x,i+y+0.5)
+				local sx = hflip and 0.5+n or 7.5-n
+				local sy = vflip and 7.5-i or 0.5+i
+				love.graphics.point(sx+x,sy+y)
 			end
 		end
 	end
@@ -193,7 +195,7 @@ NES.ppu = {
 				-- TODO: Horizontal/Vertical flipping
 				if bit.band(OAMRam[base+2],32) == 32 then -- Behind BG
 					if _ppu.ctrl.spritesize == 0 then -- 8x8 sprites
-						drawCHR((OAMRam[base+1]*16)+_ppu.ctrl.spta,OAMRam[base+3],OAMRam[base]+1,(bit.band(OAMRam[base+2],0x3)*4)+0x3F11)
+						drawCHR((OAMRam[base+1]*16)+_ppu.ctrl.spta,OAMRam[base+3],OAMRam[base]+1,(bit.band(OAMRam[base+2],0x3)*4)+0x3F11,bit.band(OAMRam[base+2],64)>0,bit.band(OAMRam[base+2],128)>0)
 					else -- 8x16 sprites
 						local tile = (math.floor(OAMRam[base+1]/2)*8)+((OAMRam[base+1]%2)*4096)
 						-- TODO: 8x16 sprites
@@ -211,8 +213,7 @@ NES.ppu = {
 				local atr = NES.ppu.VRam[atb+(aty*8)+atx]
 				local sa = amy == 0 and (amx == 0 and 0 or 2) or (amx == 0 and 4 or 6)
 				local attr = bit.band(bit.rshift(atr,sa),0x3)
-				print(x,y,atx,aty,amx,amy)
-				drawCHR((NES.ppu.VRam[(y*32)+x]*16)+NES.ppu.ppu.ctrl.bpta,x*8,y*8,(attr*4)+0x3F01)
+				drawCHR((NES.ppu.VRam[(y*32)+x]*16)+NES.ppu.ppu.ctrl.bpta,x*8,y*8,(attr*4)+0x3F01,false,false)
 			end
 		end
 		for i = 63,0,-1 do -- Sprites draw backwards
@@ -221,9 +222,10 @@ NES.ppu = {
 				-- TODO: Horizontal/Vertical flipping
 				if bit.band(OAMRam[base+2],32) == 0 then -- Infront of BG
 					if _ppu.ctrl.spritesize == 0 then -- 8x8 sprites
-						drawCHR((OAMRam[base+1]*16)+_ppu.ctrl.spta,OAMRam[base+3],OAMRam[base]+1,(bit.band(OAMRam[base+2],0x3)*4)+0x3F11)
+						drawCHR((OAMRam[base+1]*16)+_ppu.ctrl.spta,OAMRam[base+3],OAMRam[base]+1,(bit.band(OAMRam[base+2],0x3)*4)+0x3F11,bit.band(OAMRam[base+2],64)>0,bit.band(OAMRam[base+2],128)>0)
 					else -- 8x16 sprites
 						local tile = (math.floor(OAMRam[base+1]/2)*8)+((OAMRam[base+1]%2)*4096)
+						print("Warning, 8x16 sprite")
 						-- TODO: 8x16 sprites
 					end
 				end
