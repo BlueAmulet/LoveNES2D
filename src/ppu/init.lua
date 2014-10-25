@@ -169,6 +169,7 @@ NES.ppu = {
 	end,
 	ppu = _ppu,
 	VRam = VRam,
+	palette = palette,
 }
 
 -- Register ROM in bus

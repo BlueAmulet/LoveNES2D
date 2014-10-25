@@ -8,7 +8,7 @@ By Gamax92
 local _pbus = {
 	map = {
 	},
-	last = 0xFF
+	last = 0xFF,
 }
 
 NES.pbus = {
