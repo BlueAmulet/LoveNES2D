@@ -156,7 +156,7 @@ local function drawCHR(addr,x,y,pal,hflip,vflip)
 	for i=0, 7 do
 		for n=0, 7 do
 			--c = ((chr[addr+i] & (1 << n)) >> n) | ((chr[addr+i+8] & (1 << n)) >> (n-1))
-			local c = bit.band(bit.rshift(NES.pbus.readByte(addr+i),n),1)+(n > 0 and bit.band(bit.rshift(NES.pbus.readByte(addr+i+8),n-1),2) or bit.band(bit.lshift(NES.pbus.readByte(addr+i+8),1),2))
+			local c = bit.band(bit.rshift(NES.pbus.readByte(addr+i),n),1)+bit.band(n > 0 and bit.rshift(NES.pbus.readByte(addr+i+8),n-1) or bit.lshift(NES.pbus.readByte(addr+i+8),1),2)
 			if c ~= 0 then
 				love.graphics.setColor(c == 1 and p1 or c == 2 and p2 or p3)
 				local sx = hflip and 0.5+n or 7.5-n
