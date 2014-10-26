@@ -264,9 +264,9 @@ end
 function op.BRK(mode)
 	local tojump = NES.bus.readByte(0xFFFE) + (NES.bus.readByte(0xFFFF)*256)
 	local retaddr = _cpu.registers.PC + 2
-	NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,_cpu.getFlags() + 16)
-	NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256,math.floor(retaddr/256))
-	NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256,retaddr % 256)
+	NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,math.floor(retaddr/256))
+	NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256,retaddr % 256)
+	NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256,_cpu.getFlags() + 16)
 	_cpu.registers.flags.I = true
 	_cpu.registers.SP = wrap8(_cpu.registers.SP-3)
 	_cpu.registers.PC = tojump - 1
@@ -990,9 +990,9 @@ NES.cpu = {
 				_cpu.interrupt = false
 				local tojump = NES.bus.readByte(0xFFFA) + (NES.bus.readByte(0xFFFB)*256)
 				local retaddr = _cpu.registers.PC + 2
-				NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,_cpu.getFlags())
-				NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256,math.floor(retaddr/256))
-				NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256,retaddr % 256)
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,math.floor(retaddr/256))
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256,retaddr % 256)
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256,_cpu.getFlags())
 				_cpu.registers.flags.I = true
 				_cpu.registers.SP = wrap8(_cpu.registers.SP-3)
 				_cpu.registers.PC = tojump
@@ -1004,9 +1004,9 @@ NES.cpu = {
 				_cpu.interrupt = false
 				local tojump = NES.bus.readByte(0xFFFE) + (NES.bus.readByte(0xFFFF)*256)
 				local retaddr = _cpu.registers.PC + 2
-				NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,_cpu.getFlags())
-				NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256,math.floor(retaddr/256))
-				NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256,retaddr % 256)
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,math.floor(retaddr/256))
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256,retaddr % 256)
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256,_cpu.getFlags())
 				_cpu.registers.flags.I = true
 				_cpu.registers.SP = wrap8(_cpu.registers.SP-3)
 				_cpu.registers.PC = tojump
