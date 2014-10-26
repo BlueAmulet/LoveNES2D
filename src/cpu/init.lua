@@ -160,6 +160,14 @@ function op.ADC(mode)
 	end
 end
 
+function op.ANC(mode)
+	local toand = readOpcodeData(mode)
+	_cpu.registers.A = bit.band(_cpu.registers.A,toand)
+	_cpu.registers.flags.C = _cpu.registers.A >= 128
+	_cpu.registers.flags.Z = _cpu.registers.A == 0
+	_cpu.registers.flags.N = _cpu.registers.A >= 128
+end
+
 function op.AND(mode)
 	local toand
 	if mode == AM_IMMEDIATE then
@@ -180,6 +188,21 @@ end
 function op.ARR(mode)
 	op.AND(mode)
 	op.ROR(AM_ACCUMULATOR)
+	local b5 = bit.band(_cpu.registers.A,32) > 0
+	local b6 = bit.band(_cpu.registers.A,64) > 0
+	if b5 and b6 then
+		_cpu.registers.flags.C = true
+		_cpu.registers.flags.V = false
+	elseif not b5 and not b6 then
+		_cpu.registers.flags.C = false
+		_cpu.registers.flags.V = false
+	elseif b5 and not b6 then
+		_cpu.registers.flags.C = false
+		_cpu.registers.flags.V = true
+	elseif not b5 and b6 then
+		_cpu.registers.flags.C = true
+		_cpu.registers.flags.V = true
+	end
 end
 
 function op.ASL(mode)
@@ -203,11 +226,10 @@ function op.ASL(mode)
 end
 
 function op.AXS(mode)
-	op.STX(mode)
-	op.PHA(mode)
-	op.AND(mode)
-	op.STA(mode)
-	op.PLA(mode)
+	-- TODO: FAIL
+	local value = bit.band(_cpu.registers.A,_cpu.registers.X) - readOpcodeData(mode)
+	_cpu.registers.X = signed2unsigned(value) % 256
+	_cpu.registers.flags.C = value >= 0
 end
 
 function op.BCC(mode)
@@ -501,6 +523,12 @@ function op.LSR(mode)
 end
 
 function op.NOP(mode)
+end
+
+function op.OAL(mode)
+	-- TODO: FAIL
+	op.AND(mode)
+	_cpu.registers.X = _cpu.registers.A
 end
 
 function op.ORA(mode)
@@ -1022,7 +1050,7 @@ NES.cpu = {
 				if m_6502opcode[opcode][3] ~= nil then
 					m_6502opcode[opcode][3](m_6502opcode[opcode][4])
 				else
-					print("Warning: op." .. m_6502opcode[opcode][2] .. " not implemented.")
+					print("Warning: op." .. m_6502opcode[opcode][2] .. " not implemented. " .. string.format("%02X",opcode))
 				end
 				-- Increment PC
 				_cpu.registers.PC = (_cpu.registers.PC + opcode_size[m_6502opcode[opcode][4]]) % 65536
