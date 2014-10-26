@@ -27,6 +27,8 @@ _cpu = {
 			N = false,
 		},
 	},
+	interrupt = false,
+	ninterrupt = false,
 	cycles = 0,
 	getFlags = function()
 		return 32 +
@@ -265,6 +267,7 @@ function op.BRK(mode)
 	NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,_cpu.getFlags() + 16)
 	NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256,math.floor(retaddr/256))
 	NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256,retaddr % 256)
+	_cpu.registers.flags.I = true
 	_cpu.registers.SP = wrap8(_cpu.registers.SP-3)
 	_cpu.registers.PC = tojump - 1
 end
@@ -981,22 +984,49 @@ local AM_RELATIVE = 13
 NES.cpu = {
 	run = function()
 		if _cpu.running then -- Not locked up
-			--print(string.format("$%04X",_cpu.registers.PC))
-			-- Fetch OPCode
-			local opcode = NES.bus.readByte(_cpu.registers.PC)	
-			-- Run OPCode
-			if m_6502opcode[opcode][3] ~= nil then
-				--print("Running: op." .. m_6502opcode[opcode][2])
-				m_6502opcode[opcode][3](m_6502opcode[opcode][4])
+			-- Check for interrupts
+			if _cpu.ninterrupt then -- NMI
+				local tojump = NES.bus.readByte(0xFFFA) + (NES.bus.readByte(0xFFFB)*256)
+				local retaddr = _cpu.registers.PC + 2
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,_cpu.getFlags())
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256,math.floor(retaddr/256))
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256,retaddr % 256)
+				_cpu.registers.flags.I = true
+				_cpu.registers.SP = wrap8(_cpu.registers.SP-3)
+				_cpu.registers.PC = tojump
+
+				-- Decrement Cycles
+				NES.cycles = NES.cycles - 7
+				_cpu.cycles = _cpu.cycles + 7
+			elseif _cpu.interrupt and not _cpu.registers.flags.I then -- IRQ
+				local tojump = NES.bus.readByte(0xFFFE) + (NES.bus.readByte(0xFFFF)*256)
+				local retaddr = _cpu.registers.PC + 2
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,_cpu.getFlags())
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256,math.floor(retaddr/256))
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256,retaddr % 256)
+				_cpu.registers.flags.I = true
+				_cpu.registers.SP = wrap8(_cpu.registers.SP-3)
+				_cpu.registers.PC = tojump
+
+				-- Decrement Cycles
+				NES.cycles = NES.cycles - 7
+				_cpu.cycles = _cpu.cycles + 7
 			else
-				print("Warning: op." .. m_6502opcode[opcode][2] .. " not implemented.")
+				-- Fetch OPCode
+				local opcode = NES.bus.readByte(_cpu.registers.PC)	
+				-- Run OPCode
+				if m_6502opcode[opcode][3] ~= nil then
+					m_6502opcode[opcode][3](m_6502opcode[opcode][4])
+				else
+					print("Warning: op." .. m_6502opcode[opcode][2] .. " not implemented.")
+				end
+				-- Increment PC
+				_cpu.registers.PC = (_cpu.registers.PC + opcode_size[m_6502opcode[opcode][4]]) % 65536
+
+				-- Decrement Cycles
+				NES.cycles = NES.cycles - m_6502opcode[opcode][5]
+				_cpu.cycles = _cpu.cycles + m_6502opcode[opcode][5]
 			end
-			-- Increment PC
-			_cpu.registers.PC = (_cpu.registers.PC + opcode_size[m_6502opcode[opcode][4]]) % 65536
-			-- Decrement Cycles
-			NES.cycles = NES.cycles - m_6502opcode[opcode][5]
-	
-			_cpu.cycles = _cpu.cycles + m_6502opcode[opcode][5]
 		else
 			NES.cycles = 0 -- Nothing is being run.
 		end

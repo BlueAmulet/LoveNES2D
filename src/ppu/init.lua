@@ -75,6 +75,9 @@ local function readCtrl(address)
 	if address == 2 then -- Status
 		local stat = _ppu.last + (vbstart and 128 or 0)
 		vbstart = false
+		-- Clear Latch
+		_ppu.camwrite = false
+		_ppu.ppuwrite = false
 		return stat
 	elseif address == 4 then -- OAM data
 		-- TODO: Faulty Increment?
@@ -149,6 +152,14 @@ local function writeCtrl(address,value)
 	end
 end
 
+local function writeDMA(address,value)
+	local base = value * 256
+	for i = 0,255 do
+		OAMRam[_ppu.oamaddr] = NES.bus.readByte(base+i)
+		_ppu.oamaddr = (_ppu.oamaddr + 1)%256
+	end
+end
+
 local function drawCHR(addr,x,y,pal,hflip,vflip)
 	local p1 = palette[NES.pbus.readByte(pal)]
 	local p2 = palette[NES.pbus.readByte(pal+1)]
@@ -202,19 +213,29 @@ NES.ppu = {
 				end
 			end
 		end
-		for y = 0,29 do
-			for x = 0,31 do
-				local atx = math.floor(x/4)
-				local aty = math.floor(y/4)
-				local amx = math.floor((x-(atx*4))/2)
-				local amy = math.floor((y-(aty*4))/2)
-				local atb = 0x3C0
-				local atr = NES.ppu.VRam[atb+(aty*8)+atx]
-				local sa = amy == 0 and (amx == 0 and 0 or 2) or (amx == 0 and 4 or 6)
-				local attr = bit.band(bit.rshift(atr,sa),0x3)
-				drawCHR((NES.ppu.VRam[(y*32)+x]*16)+NES.ppu.ppu.ctrl.bpta,x*8,y*8,(attr*4)+0x3F01,false,false)
+		local xscroll = (_ppu.ctrl.xscroll*256)+_ppu.camx
+		local yscroll = (_ppu.ctrl.yscroll*120)+_ppu.camy
+		-- TODO: Only draw visible tiles
+		love.graphics.translate(-xscroll,-yscroll)
+		for by = 0,1 do
+			for bx = 0,1 do
+				local base = 0x2000 + (bx*0x400) + (by*0x800)
+				for y = 0,29 do
+					for x = 0,31 do
+						local atx = math.floor(x/4)
+						local aty = math.floor(y/4)
+						local amx = math.floor((x-(atx*4))/2)
+						local amy = math.floor((y-(aty*4))/2)
+						local atb = 0x3C0
+						local atr = NES.pbus.readByte(base+atb+(aty*8)+atx)
+						local sa = amy == 0 and (amx == 0 and 0 or 2) or (amx == 0 and 4 or 6)
+						local attr = bit.band(bit.rshift(atr,sa),0x3)
+						drawCHR((NES.pbus.readByte(base+(y*32)+x)*16)+NES.ppu.ppu.ctrl.bpta,(x*8)+(bx*256),(y*8)+(by*240),(attr*4)+0x3F01,false,false)
+					end
+				end
 			end
 		end
+		love.graphics.translate(xscroll,yscroll)
 		for i = 63,0,-1 do -- Sprites draw backwards
 			local base = i*4
 			if OAMRam[base] < 0xEF then
@@ -240,6 +261,9 @@ NES.ppu = {
 
 -- Register ROM in bus
 NES.bus.register(0x2000, 0x2000, readCtrl, writeCtrl, 7)
+
+-- OAM DMA
+NES.bus.register(0x4014, 1, function() return NES.bus.bus.last end, writeDMA, 0)
 
 -- Register Memory in ppu-bus
 NES.pbus.register(0x3F00, 0x00FF, readPalRam, writePalRam, 0x1F)

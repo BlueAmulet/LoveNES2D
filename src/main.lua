@@ -20,6 +20,7 @@ function love.load()
 	require("rom")
 	require("apu")
 	require("ppu")
+	require("joy")
 	require("cpu")
 	
 	NES.rom.reset()
