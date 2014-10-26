@@ -986,6 +986,8 @@ NES.cpu = {
 		if _cpu.running then -- Not locked up
 			-- Check for interrupts
 			if _cpu.ninterrupt then -- NMI
+				_cpu.ninterrupt = false
+				_cpu.interrupt = false
 				local tojump = NES.bus.readByte(0xFFFA) + (NES.bus.readByte(0xFFFB)*256)
 				local retaddr = _cpu.registers.PC + 2
 				NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,_cpu.getFlags())
@@ -999,6 +1001,7 @@ NES.cpu = {
 				NES.cycles = NES.cycles - 7
 				_cpu.cycles = _cpu.cycles + 7
 			elseif _cpu.interrupt and not _cpu.registers.flags.I then -- IRQ
+				_cpu.interrupt = false
 				local tojump = NES.bus.readByte(0xFFFE) + (NES.bus.readByte(0xFFFF)*256)
 				local retaddr = _cpu.registers.PC + 2
 				NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,_cpu.getFlags())
@@ -1012,6 +1015,7 @@ NES.cpu = {
 				NES.cycles = NES.cycles - 7
 				_cpu.cycles = _cpu.cycles + 7
 			else
+				_cpu.interrupt = false
 				-- Fetch OPCode
 				local opcode = NES.bus.readByte(_cpu.registers.PC)	
 				-- Run OPCode

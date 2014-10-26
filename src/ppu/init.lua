@@ -40,7 +40,7 @@ local _ppu = {
 
 local VRam = {}
 for i = 0,2047 do
-	VRam[i] = 0
+	VRam[i] = 0xFF
 end
 
 local PalRam = {}
@@ -189,7 +189,7 @@ NES.ppu = {
 		if _ppu.lastcycle > 2273 and NES.cycles <= 2273 then -- VBlank start
 			vbstart = true
 			if _ppu.ctrl.nmi ~= 0 then
-				-- TODO: Generate interrupt
+				NES.cpu.cpu.ninterrupt = true
 			end
 		end
 		if _ppu.lastcycle <= 2273 and NES.cycles > 2273 then -- VBlank ended
