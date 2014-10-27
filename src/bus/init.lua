@@ -19,6 +19,10 @@ NES.bus = {
 			map = _bus.map[i]
 			if map[1] <= address and map[1] + map[2] > address then
 				_bus.last = map[3](bit.band(address, map[5]))
+				if type(_bus.last) ~= "number" then
+					print("Warning: Read a " .. type(_bus.last) .. " on " .. string.format("b%04X a%04X l%04X", map[1], address, map[2]))
+					print("We will likely crash now ... Bye!")
+				end
 				return _bus.last
 			end
 		end

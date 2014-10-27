@@ -1009,6 +1009,18 @@ local AM_PREINDEXED_INDIRECT = 11
 local AM_POSTINDEXED_INDIRECT = 12
 local AM_RELATIVE = 13
 
+local function makeNintendulatorLog(opcode)
+	local bytes = ""
+	local obj = ""
+	for i = 0, opcode_size[m_6502opcode[opcode][4]] - 1 do
+		bytes = bytes .. " " .. string.format("%02X", NES.bus.readByte(_cpu.registers.PC + i))
+		if i > 0 then
+			obj = string.format("%02X", NES.bus.readByte(_cpu.registers.PC + i)) .. obj
+		end
+	end
+	return string.format("%04X %-9s %4s %-28sA:%02X X:%02X Y:%02X P:%02X SP:%02X", _cpu.registers.PC, bytes, m_6502opcode[opcode][2], obj, _cpu.registers.A, _cpu.registers.X, _cpu.registers.Y, _cpu.getFlags(), _cpu.registers.SP)
+end
+
 NES.cpu = {
 	run = function()
 		if _cpu.running then -- Not locked up
@@ -1045,7 +1057,10 @@ NES.cpu = {
 			else
 				_cpu.interrupt = false
 				-- Fetch OPCode
-				local opcode = NES.bus.readByte(_cpu.registers.PC)	
+				local opcode = NES.bus.readByte(_cpu.registers.PC)
+				if true then -- Generate log
+					print(makeNintendulatorLog(opcode))
+				end
 				-- Run OPCode
 				if m_6502opcode[opcode][3] ~= nil then
 					m_6502opcode[opcode][3](m_6502opcode[opcode][4])

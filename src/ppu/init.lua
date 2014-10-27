@@ -43,6 +43,8 @@ for i = 0,2047 do
 	VRam[i] = 0xFF
 end
 
+local Buffer = {}
+
 local PalRam = {}
 for i = 0,31 do	
 	PalRam[i] = 0
@@ -54,9 +56,15 @@ for i = 0,255 do
 end
 
 local function readPalRam(address)
+	if address == 0x10 or address == 0x14 or address == 0x18 or address == 0x1C then
+		address = address - 0x10
+	end
 	return PalRam[address]
 end
 local function writePalRam(address,value)
+	if address == 0x10 or address == 0x14 or address == 0x18 or address == 0x1C then
+		address = address - 0x10
+	end
 	PalRam[address] = value
 end
 
@@ -80,19 +88,26 @@ local function readCtrl(address)
 		_ppu.ppuwrite = false
 		return stat
 	elseif address == 4 then -- OAM data
-		-- TODO: Faulty Increment?
-		local value = OAMRam[_ppu.oamaddr]
-		_ppu.oamaddr = (_ppu.oamaddr + 1)%256
-		return value
+		return OAMRam[_ppu.oamaddr]
 	elseif address == 7 then -- Data
 		-- TODO: Non-VBlank Glitchy Read?
 		local value = NES.pbus.readByte(_ppu.ppuaddr)
+		local ppuaddr = _ppu.ppuaddr
 		if _ppu.ctrl.increment == 0 then
 			_ppu.ppuaddr = (_ppu.ppuaddr+1)%16384
 		else
 			_ppu.ppuaddr = (_ppu.ppuaddr+32)%16384
 		end
-		return value
+		if ppuaddr < 0x3F00 then
+			if Buffer[ppuaddr] == nil then
+				Buffer[ppuaddr] = math.random(0,255)
+			end
+			local cache = Buffer[ppuaddr]
+			Buffer[ppuaddr] = value
+			return cache
+		else
+			return value
+		end
 	else
 		return NES.bus.bus.last
 	end
@@ -186,13 +201,14 @@ NES.ppu = {
 		local cX = (NES.cycles*3)%341
 		local cY = math.floor(262-((NES.cycles*3)/341))
 		
-		if _ppu.lastcycle > 2273 and NES.cycles <= 2273 then -- VBlank start
+		local set = 2065 -- Determined by vbl_clear_time.nes
+		if _ppu.lastcycle > set and NES.cycles <= set then -- VBlank start
 			vbstart = true
 			if _ppu.ctrl.nmi ~= 0 then
 				NES.cpu.cpu.ninterrupt = true
 			end
 		end
-		if _ppu.lastcycle <= 2273 and NES.cycles > 2273 then -- VBlank ended
+		if _ppu.lastcycle <= set and NES.cycles > set then -- VBlank ended
 			vbstart = false
 		end
 		_ppu.lastcycle = NES.cycles

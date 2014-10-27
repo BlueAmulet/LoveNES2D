@@ -34,7 +34,7 @@ local readCHR, writeCHR
 if header.chrsize == 0 then
 	local CHR_RAM = {}
 	for i = 0,8191 do
-		CHR_RAM = 0
+		CHR_RAM[i] = 0
 	end
 	function readCHR(address)
 		return CHR_RAM[address]
