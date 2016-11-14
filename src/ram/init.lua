@@ -6,7 +6,7 @@ By Gamax92
 --]]
 
 local memory = {}
-for i = 0,2047 do
+for i = 0, 2047 do
 	memory[i] = i % 8 < 4 and 0 or 255
 end
 
@@ -22,5 +22,3 @@ NES.ram = {
 }
 
 NES.bus.register(0, 0x2000, readRam, writeRam, 0x7FF)
-
-

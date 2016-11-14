@@ -15,7 +15,7 @@ NES.pbus = {
 	-- Read from "Device"
 	readByte = function(address)
 		address = address % 16384
-		for i = 1,#_pbus.map do
+		for i = 1, #_pbus.map do
 			map = _pbus.map[i]
 			if map[1] <= address and map[1] + map[2] > address then
 				_pbus.last = map[3](bit.band(address, map[5]))
@@ -28,7 +28,7 @@ NES.pbus = {
 	writeByte = function(address, value)
 		address = address % 16384
 		value = value % 256
-		for i = 1,#_pbus.map do
+		for i = 1, #_pbus.map do
 			map = _pbus.map[i]
 			if map[1] <= address and map[1] + map[2] > address then
 				map[4](bit.band(address, map[5]), value)

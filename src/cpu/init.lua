@@ -40,12 +40,12 @@ _cpu = {
 		(_cpu.registers.flags.N and 128 or 0)
 	end,
 	setFlags = function(flags)
-		_cpu.registers.flags.C = bit.band(flags,1) ~= 0
-		_cpu.registers.flags.Z = bit.band(flags,2) ~= 0
-		_cpu.registers.flags.I = bit.band(flags,4) ~= 0
-		_cpu.registers.flags.D = bit.band(flags,8) ~= 0
-		_cpu.registers.flags.V = bit.band(flags,64) ~= 0
-		_cpu.registers.flags.N = bit.band(flags,128) ~= 0
+		_cpu.registers.flags.C = bit.band(flags, 1) ~= 0
+		_cpu.registers.flags.Z = bit.band(flags, 2) ~= 0
+		_cpu.registers.flags.I = bit.band(flags, 4) ~= 0
+		_cpu.registers.flags.D = bit.band(flags, 8) ~= 0
+		_cpu.registers.flags.V = bit.band(flags, 64) ~= 0
+		_cpu.registers.flags.N = bit.band(flags, 128) ~= 0
 	end,
 }
 
@@ -101,29 +101,29 @@ local function readOpcodeData(mode)
 	elseif mode == AM_IMMEDIATE then
 		return NES.bus.readByte(_cpu.registers.PC + 1)
 	elseif mode == AM_ABSOLUTE then
-		return NES.bus.readByte(_cpu.registers.PC + 2)*256 + NES.bus.readByte(_cpu.registers.PC + 1)
+		return bit.lshift(NES.bus.readByte(_cpu.registers.PC + 2), 8) + NES.bus.readByte(_cpu.registers.PC + 1)
 	elseif mode == AM_ZEROPAGE then
 		return NES.bus.readByte(_cpu.registers.PC + 1)
 	elseif mode == AM_ACCUMULATOR then
 		return _cpu.registers.A
 	elseif mode == AM_ABSOLUTE_INDEXED_X then
-		return NES.bus.readByte(_cpu.registers.PC + 2)*256 + NES.bus.readByte(_cpu.registers.PC + 1) + _cpu.registers.X
+		return bit.lshift(NES.bus.readByte(_cpu.registers.PC + 2), 8) + NES.bus.readByte(_cpu.registers.PC + 1) + _cpu.registers.X
 	elseif mode == AM_ABSOLUTE_INDEXED_Y then
-		return NES.bus.readByte(_cpu.registers.PC + 2)*256 + NES.bus.readByte(_cpu.registers.PC + 1) + _cpu.registers.Y
+		return bit.lshift(NES.bus.readByte(_cpu.registers.PC + 2), 8) + NES.bus.readByte(_cpu.registers.PC + 1) + _cpu.registers.Y
 	elseif mode == AM_ZEROPAGE_INDEXED_X then
-		return (NES.bus.readByte(_cpu.registers.PC + 1) + _cpu.registers.X)%256
+		return bit.band(NES.bus.readByte(_cpu.registers.PC + 1) + _cpu.registers.X, 0xFF)
 	elseif mode == AM_ZEROPAGE_INDEXED_Y then
-		return (NES.bus.readByte(_cpu.registers.PC + 1) + _cpu.registers.Y)%256
+		return bit.band(NES.bus.readByte(_cpu.registers.PC + 1) + _cpu.registers.Y, 0xFF)
 	elseif mode == AM_INDIRECT then
-		local address = NES.bus.readByte(_cpu.registers.PC + 2)*256 + NES.bus.readByte(_cpu.registers.PC + 1)
-		local base = bit.band(address,0xFF00)
-		return NES.bus.readByte(base+((address+1)%256))*256 + NES.bus.readByte(address)
+		local address = bit.lshift(NES.bus.readByte(_cpu.registers.PC + 2), 8) + NES.bus.readByte(_cpu.registers.PC + 1)
+		local base = bit.band(address, 0xFF00)
+		return bit.lshift(NES.bus.readByte(base+(bit.band(address+1, 0xFF))), 8) + NES.bus.readByte(address)
 	elseif mode == AM_PREINDEXED_INDIRECT then
 		local address = NES.bus.readByte(_cpu.registers.PC + 1) + _cpu.registers.X
-		return NES.bus.readByte((address+1)%256)*256 + NES.bus.readByte(address%256)
+		return bit.lshift(NES.bus.readByte(bit.band(address+1, 0xFF)), 8) + NES.bus.readByte(bit.band(address, 0xFF))
 	elseif mode == AM_POSTINDEXED_INDIRECT then
 		local address = NES.bus.readByte(_cpu.registers.PC + 1)
-		return NES.bus.readByte((address+1)%256)*256 + NES.bus.readByte(address%256) + _cpu.registers.Y
+		return bit.lshift(NES.bus.readByte(bit.band(address+1, 0xFF)), 8) + NES.bus.readByte(bit.band(address, 0xFF)) + _cpu.registers.Y
 	elseif mode == AM_RELATIVE then
 		return unsigned2signed(NES.bus.readByte(_cpu.registers.PC + 1))
 	end
@@ -133,7 +133,7 @@ local function wrap8(value)
 	while value < 0 do
 		value = value + 256
 	end
-	return value % 256
+	return bit.band(value, 0xFF)
 end
 
 -- Opcodes
@@ -152,7 +152,7 @@ function op.ADC(mode)
 		local value2 = _cpu.registers.A + tosum + (_cpu.registers.flags.C and 1 or 0)
 		tosum = unsigned2signed(tosum)
 		local value = unsigned2signed(_cpu.registers.A) + tosum + (_cpu.registers.flags.C and 1 or 0)
-		_cpu.registers.A = signed2unsigned(value) % 256
+		_cpu.registers.A = bit.band(signed2unsigned(value), 0xFF)
 		_cpu.registers.flags.C = value2 >= 256
 		_cpu.registers.flags.Z = _cpu.registers.A == 0
 		_cpu.registers.flags.V = value > 127 or value < -128
@@ -162,7 +162,7 @@ end
 
 function op.ANC(mode)
 	local toand = readOpcodeData(mode)
-	_cpu.registers.A = bit.band(_cpu.registers.A,toand)
+	_cpu.registers.A = bit.band(_cpu.registers.A, toand)
 	_cpu.registers.flags.C = _cpu.registers.A >= 128
 	_cpu.registers.flags.Z = _cpu.registers.A == 0
 	_cpu.registers.flags.N = _cpu.registers.A >= 128
@@ -175,7 +175,7 @@ function op.AND(mode)
 	else
 		toand = NES.bus.readByte(readOpcodeData(mode))
 	end
-	_cpu.registers.A = bit.band(_cpu.registers.A,toand)
+	_cpu.registers.A = bit.band(_cpu.registers.A, toand)
 	_cpu.registers.flags.Z = _cpu.registers.A == 0
 	_cpu.registers.flags.N = _cpu.registers.A >= 128
 end
@@ -188,8 +188,8 @@ end
 function op.ARR(mode)
 	op.AND(mode)
 	op.ROR(AM_ACCUMULATOR)
-	local b5 = bit.band(_cpu.registers.A,32) > 0
-	local b6 = bit.band(_cpu.registers.A,64) > 0
+	local b5 = bit.band(_cpu.registers.A, 32) > 0
+	local b6 = bit.band(_cpu.registers.A, 64) > 0
 	if b5 and b6 then
 		_cpu.registers.flags.C = true
 		_cpu.registers.flags.V = false
@@ -214,11 +214,11 @@ function op.ASL(mode)
 		value = NES.bus.readByte(addr)
 	end
 	local oldseven = value >= 128
-	value = (value*2)%256
+	value = bit.band(value*2, 0xFF)
 	if mode == AM_ACCUMULATOR then
 		_cpu.registers.A = value
 	else
-		NES.bus.writeByte(addr,value)
+		NES.bus.writeByte(addr, value)
 	end
 	_cpu.registers.flags.C = oldseven
 	_cpu.registers.flags.Z = value == 0
@@ -227,8 +227,8 @@ end
 
 function op.AXS(mode)
 	-- TODO: FAIL
-	local value = bit.band(_cpu.registers.A,_cpu.registers.X) - readOpcodeData(mode)
-	_cpu.registers.X = signed2unsigned(value) % 256
+	local value = bit.band(_cpu.registers.A, _cpu.registers.X) - readOpcodeData(mode)
+	_cpu.registers.X = bit.band(signed2unsigned(value), 0xFF)
 	_cpu.registers.flags.C = value >= 0
 end
 
@@ -255,11 +255,11 @@ end
 
 function op.BIT(mode)
 	local totest = NES.bus.readByte(readOpcodeData(mode))
-	local value = bit.band(_cpu.registers.A,totest)
-	
+	local value = bit.band(_cpu.registers.A, totest)
+
 	_cpu.registers.flags.Z = value == 0
-	_cpu.registers.flags.V = bit.band(totest,64) ~= 0
-	_cpu.registers.flags.N = bit.band(totest,128) ~= 0
+	_cpu.registers.flags.V = bit.band(totest, 64) ~= 0
+	_cpu.registers.flags.N = bit.band(totest, 128) ~= 0
 end
 
 function op.BMI(mode)
@@ -284,11 +284,11 @@ function op.BPL(mode)
 end
 
 function op.BRK(mode)
-	local tojump = NES.bus.readByte(0xFFFE) + (NES.bus.readByte(0xFFFF)*256)
+	local tojump = NES.bus.readByte(0xFFFE) + bit.lshift(NES.bus.readByte(0xFFFF), 8)
 	local retaddr = _cpu.registers.PC + 2
-	NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,math.floor(retaddr/256))
-	NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256,retaddr % 256)
-	NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256,_cpu.getFlags() + 16)
+	NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256, math.floor(retaddr/256))
+	NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256, bit.band(retaddr, 0xFF))
+	NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256, _cpu.getFlags() + 16)
 	_cpu.registers.flags.I = true
 	_cpu.registers.SP = wrap8(_cpu.registers.SP-3)
 	_cpu.registers.PC = tojump - 1
@@ -371,7 +371,7 @@ end
 function op.DEC(mode)
 	local addr = readOpcodeData(mode)
 	local value = wrap8(NES.bus.readByte(addr) - 1)
-	NES.bus.writeByte(addr,value)
+	NES.bus.writeByte(addr, value)
 	_cpu.registers.flags.Z = value == 0
 	_cpu.registers.flags.N = value >= 128
 end
@@ -404,7 +404,7 @@ function op.EOR(mode)
 	else
 		toxor = NES.bus.readByte(readOpcodeData(mode))
 	end
-	_cpu.registers.A = bit.bxor(_cpu.registers.A,toxor)
+	_cpu.registers.A = bit.bxor(_cpu.registers.A, toxor)
 	_cpu.registers.flags.Z = _cpu.registers.A == 0
 	_cpu.registers.flags.N = _cpu.registers.A >= 128
 end
@@ -412,7 +412,7 @@ end
 function op.INC(mode)
 	local address = readOpcodeData(mode)
 	local value = NES.bus.readByte(address)
-	value = (value + 1) % 256
+	value = bit.band(value + 1, 0xFF)
 	NES.bus.writeByte(address, value)
 	_cpu.registers.flags.Z = value == 0
 	_cpu.registers.flags.N = value >= 128
@@ -424,13 +424,13 @@ function op.ISB(mode)
 end
 
 function op.INX(mode)
-	_cpu.registers.X = (_cpu.registers.X + 1) % 256
+	_cpu.registers.X = bit.band(_cpu.registers.X + 1, 0xFF)
 	_cpu.registers.flags.Z = _cpu.registers.X == 0
 	_cpu.registers.flags.N = _cpu.registers.X >= 128
 end
 
 function op.INY(mode)
-	_cpu.registers.Y = (_cpu.registers.Y + 1) % 256
+	_cpu.registers.Y = bit.band(_cpu.registers.Y + 1, 0xFF)
 	_cpu.registers.flags.Z = _cpu.registers.Y == 0
 	_cpu.registers.flags.N = _cpu.registers.Y >= 128
 end
@@ -443,8 +443,8 @@ end
 function op.JSR(mode)
 	local tojump = readOpcodeData(mode)
 	local retaddr = _cpu.registers.PC + 2
-	NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,math.floor(retaddr/256))
-	NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256,retaddr % 256)
+	NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256, math.floor(retaddr/256))
+	NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256, bit.band(retaddr, 0xFF))
 	_cpu.registers.SP = wrap8(_cpu.registers.SP-2)
 	_cpu.registers.PC = tojump - 3 -- 3 counteracts PC increment
 end
@@ -515,7 +515,7 @@ function op.LSR(mode)
 	if mode == AM_ACCUMULATOR then
 		_cpu.registers.A = value
 	else
-		NES.bus.writeByte(addr,value)
+		NES.bus.writeByte(addr, value)
 	end
 	_cpu.registers.flags.C = oldzero == 1
 	_cpu.registers.flags.Z = value == 0
@@ -538,7 +538,7 @@ function op.ORA(mode)
 	else
 		toor = NES.bus.readByte(readOpcodeData(mode))
 	end
-	_cpu.registers.A = bit.bor(_cpu.registers.A,toor)
+	_cpu.registers.A = bit.bor(_cpu.registers.A, toor)
 	_cpu.registers.flags.Z = _cpu.registers.A == 0
 	_cpu.registers.flags.N = _cpu.registers.A >= 128
 end
@@ -580,11 +580,11 @@ function op.ROL(mode)
 		value = NES.bus.readByte(addr)
 	end
 	local oldseven = value >= 128
-	value = ((value*2) + (_cpu.registers.flags.C and 1 or 0)) % 256
+	value = bit.band((value*2) + (_cpu.registers.flags.C and 1 or 0), 0xFF)
 	if mode == AM_ACCUMULATOR then
 		_cpu.registers.A = value
 	else
-		NES.bus.writeByte(addr,value)
+		NES.bus.writeByte(addr, value)
 	end
 	_cpu.registers.flags.C = oldseven
 	_cpu.registers.flags.Z = value == 0
@@ -604,7 +604,7 @@ function op.ROR(mode)
 	if mode == AM_ACCUMULATOR then
 		_cpu.registers.A = value
 	else
-		NES.bus.writeByte(addr,value)
+		NES.bus.writeByte(addr, value)
 	end
 	_cpu.registers.flags.C = oldzero == 1
 	_cpu.registers.flags.Z = value == 0
@@ -618,20 +618,20 @@ end
 
 function op.RTI(mode)
 	local flags = NES.bus.readByte(wrap8(_cpu.registers.SP+1)+256)
-	local tojump = NES.bus.readByte(wrap8(_cpu.registers.SP+2)+256) + (NES.bus.readByte(wrap8(_cpu.registers.SP+3)+256)*256)
+	local tojump = NES.bus.readByte(wrap8(_cpu.registers.SP+2)+256) + bit.lshift(NES.bus.readByte(wrap8(_cpu.registers.SP+3)+256), 8)
 	_cpu.setFlags(flags)
 	_cpu.registers.SP = wrap8(_cpu.registers.SP+3)
 	_cpu.registers.PC = tojump - 1 -- Counteract PC increment
 end
 
 function op.RTS(mode)
-	local tojump = NES.bus.readByte(wrap8(_cpu.registers.SP+1)+256) + (NES.bus.readByte(wrap8(_cpu.registers.SP+2)+256)*256)
+	local tojump = NES.bus.readByte(wrap8(_cpu.registers.SP+1)+256) + bit.lshift(NES.bus.readByte(wrap8(_cpu.registers.SP+2)+256), 8)
 	_cpu.registers.SP = wrap8(_cpu.registers.SP+2)
 	_cpu.registers.PC = tojump
 end
 
 function op.SAX(mode)
-	NES.bus.writeByte(readOpcodeData(mode),bit.band(_cpu.registers.X,_cpu.registers.A))
+	NES.bus.writeByte(readOpcodeData(mode), bit.band(_cpu.registers.X, _cpu.registers.A))
 end
 
 function op.SBC(mode)
@@ -647,7 +647,7 @@ function op.SBC(mode)
 		local value2 = _cpu.registers.A - tominus - (_cpu.registers.flags.C and 0 or 1)
 		tominus = unsigned2signed(tominus)
 		local value = unsigned2signed(_cpu.registers.A) - tominus - (_cpu.registers.flags.C and 0 or 1)
-		_cpu.registers.A = signed2unsigned(value) % 256
+		_cpu.registers.A = bit.band(signed2unsigned(value), 0xFF)
 		_cpu.registers.flags.C = value2 >= 0
 		_cpu.registers.flags.Z = _cpu.registers.A == 0
 		_cpu.registers.flags.V = value > 127 or value < -128
@@ -1028,11 +1028,11 @@ NES.cpu = {
 			if _cpu.ninterrupt then -- NMI
 				_cpu.ninterrupt = false
 				_cpu.interrupt = false
-				local tojump = NES.bus.readByte(0xFFFA) + (NES.bus.readByte(0xFFFB)*256)
+				local tojump = NES.bus.readByte(0xFFFA) + bit.lshift(NES.bus.readByte(0xFFFB), 8)
 				local retaddr = _cpu.registers.PC + 2
-				NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,math.floor(retaddr/256))
-				NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256,retaddr % 256)
-				NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256,_cpu.getFlags())
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256, math.floor(retaddr/256))
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256, bit.band(retaddr, 0xFF))
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256, _cpu.getFlags())
 				_cpu.registers.flags.I = true
 				_cpu.registers.SP = wrap8(_cpu.registers.SP-3)
 				_cpu.registers.PC = tojump
@@ -1042,11 +1042,11 @@ NES.cpu = {
 				_cpu.cycles = _cpu.cycles + 7
 			elseif _cpu.interrupt and not _cpu.registers.flags.I then -- IRQ
 				_cpu.interrupt = false
-				local tojump = NES.bus.readByte(0xFFFE) + (NES.bus.readByte(0xFFFF)*256)
+				local tojump = NES.bus.readByte(0xFFFE) + bit.lshift(NES.bus.readByte(0xFFFF), 8)
 				local retaddr = _cpu.registers.PC + 2
-				NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256,math.floor(retaddr/256))
-				NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256,retaddr % 256)
-				NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256,_cpu.getFlags())
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-0)+256, math.floor(retaddr/256))
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-1)+256, bit.band(retaddr, 0xFF))
+				NES.bus.writeByte(wrap8(_cpu.registers.SP-2)+256, _cpu.getFlags())
 				_cpu.registers.flags.I = true
 				_cpu.registers.SP = wrap8(_cpu.registers.SP-3)
 				_cpu.registers.PC = tojump
@@ -1058,14 +1058,15 @@ NES.cpu = {
 				_cpu.interrupt = false
 				-- Fetch OPCode
 				local opcode = NES.bus.readByte(_cpu.registers.PC)
-				if true then -- Generate log
-					print(makeNintendulatorLog(opcode))
-				end
+				--[[
+				-- Generate log
+				print(makeNintendulatorLog(opcode))
+				--]]
 				-- Run OPCode
 				if m_6502opcode[opcode][3] ~= nil then
 					m_6502opcode[opcode][3](m_6502opcode[opcode][4])
 				else
-					print("Warning: op." .. m_6502opcode[opcode][2] .. " not implemented. " .. string.format("%02X",opcode))
+					print("Warning: op." .. m_6502opcode[opcode][2] .. " not implemented. " .. string.format("%02X", opcode))
 				end
 				-- Increment PC
 				_cpu.registers.PC = (_cpu.registers.PC + opcode_size[m_6502opcode[opcode][4]]) % 65536
@@ -1081,11 +1082,11 @@ NES.cpu = {
 	reset = function()
 		-- TODO: Reset code
 		_cpu.running = true
-		_cpu.registers.PC = NES.bus.readByte(0xFFFC) + (NES.bus.readByte(0xFFFD)*256)
+		_cpu.registers.PC = NES.bus.readByte(0xFFFC) + bit.lshift(NES.bus.readByte(0xFFFD), 8)
 		-- Initialize Stack
 		_cpu.registers.SP = 0xFD
-		NES.bus.writeByte(0x1FE,0xFF)
-		NES.bus.writeByte(0x1FF,0xFF)
+		NES.bus.writeByte(0x1FE, 0xFF)
+		NES.bus.writeByte(0x1FF, 0xFF)
 	end,
 	cpu = _cpu,
 }

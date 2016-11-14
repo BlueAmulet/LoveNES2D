@@ -27,7 +27,7 @@ function love.load()
 	NES.ppu.reset()
 	NES.cpu.reset()
 	
-	NES.canvas = love.graphics.newCanvas(256,240)
+	NES.canvas = love.graphics.newCanvas(256, 240)
 end
 
 -- Emulate one PPU frame
@@ -45,14 +45,14 @@ function love.update()
 end
 
 function love.draw()
-	love.graphics.setColor(255,255,255)
+	love.graphics.setColor(255, 255, 255)
 	local y = 10
-	love.graphics.print("Frame #" .. framecount .. " at " .. os.date(),10,y) y=y+40
-	love.graphics.print("A: " .. string.format("%02X",NES.cpu.cpu.registers.A),10,y) y=y+20
-	love.graphics.print("X: " .. string.format("%02X",NES.cpu.cpu.registers.X),10,y) y=y+20
-	love.graphics.print("Y: " .. string.format("%02X",NES.cpu.cpu.registers.Y),10,y) y=y+20
-	love.graphics.print("SP: " .. string.format("$01%02X",NES.cpu.cpu.registers.SP),10,y) y=y+20
-	love.graphics.print("PC: " .. string.format("$%04X",NES.cpu.cpu.registers.PC),10,y) y=y+20
+	love.graphics.print("Frame #" .. framecount .. " at " .. os.date(), 10, y) y=y+40
+	love.graphics.print("A: " .. string.format("%02X", NES.cpu.cpu.registers.A), 10, y) y=y+20
+	love.graphics.print("X: " .. string.format("%02X", NES.cpu.cpu.registers.X), 10, y) y=y+20
+	love.graphics.print("Y: " .. string.format("%02X", NES.cpu.cpu.registers.Y), 10, y) y=y+20
+	love.graphics.print("SP: " .. string.format("$01%02X", NES.cpu.cpu.registers.SP), 10, y) y=y+20
+	love.graphics.print("PC: " .. string.format("$%04X", NES.cpu.cpu.registers.PC), 10, y) y=y+20
 	
 	NES.canvas:renderTo(NES.ppu.draw)
 	
