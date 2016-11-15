@@ -175,6 +175,16 @@ local function writeDMA(address, value)
 	end
 end
 
+local xscroll
+local yscroll
+local function drawPixel(x, y, pal)
+	x=x+xscroll
+	y=y+yscroll
+	if x>=0 and x<256 and y>=0 and y<240 then
+		NES.screen:setPixel(x, y, pal[1], pal[2], pal[3], 255)
+	end
+end
+
 local function drawCHR(addr, x, y, pal, hflip, vflip)
 	local p1 = palette[NES.pbus.readByte(pal)]
 	local p2 = palette[NES.pbus.readByte(pal+1)]
@@ -184,13 +194,17 @@ local function drawCHR(addr, x, y, pal, hflip, vflip)
 			--c = ((chr[addr+i] & (1 << n)) >> n) | ((chr[addr+i+8] & (1 << n)) >> (n-1))
 			local c = bit.band(bit.rshift(NES.pbus.readByte(addr+i), n), 1)+bit.band(n > 0 and bit.rshift(NES.pbus.readByte(addr+i+8), n-1) or bit.lshift(NES.pbus.readByte(addr+i+8), 1), 2)
 			if c ~= 0 then
-				love.graphics.setColor(c == 1 and p1 or c == 2 and p2 or p3)
 				local sx = hflip and 0.5+n or 7.5-n
 				local sy = vflip and 7.5-i or 0.5+i
-				love.graphics.points(sx+x, sy+y)
+				drawPixel(sx+x, sy+y, c == 1 and p1 or c == 2 and p2 or p3)
 			end
 		end
 	end
+end
+
+local bgpal
+local function drawBackground()
+	return bgpal[1], bgpal[2], bgpal[3], 255
 end
 
 NES.ppu = {
@@ -214,8 +228,8 @@ NES.ppu = {
 		_ppu.lastcycle = NES.cycles
 	end,
 	draw = function()
-		love.graphics.setColor(palette[NES.pbus.readByte(0x3F00)])
-		love.graphics.rectangle("fill", 0, 0, 256, 240)
+		bgpal = palette[NES.pbus.readByte(0x3F00)]
+		NES.screen:mapPixel(drawBackground, 0, 0, 256, 240)
 		for i = 63, 0, -1 do -- Sprites draw backwards
 			local base = i*4
 			if OAMRam[base] < 0xEF then
@@ -229,10 +243,9 @@ NES.ppu = {
 				end
 			end
 		end
-		local xscroll = (_ppu.ctrl.xscroll*256)+_ppu.camx
-		local yscroll = (_ppu.ctrl.yscroll*120)+_ppu.camy
+		xscroll = (_ppu.ctrl.xscroll*256)+_ppu.camx
+		yscroll = (_ppu.ctrl.yscroll*120)+_ppu.camy
 		-- TODO: Only draw visible tiles
-		love.graphics.translate(-xscroll, -yscroll)
 		for by = 0, 1 do
 			for bx = 0, 1 do
 				local base = 0x2000 + (bx*0x400) + (by*0x800)
@@ -251,7 +264,6 @@ NES.ppu = {
 				end
 			end
 		end
-		love.graphics.translate(xscroll, yscroll)
 		for i = 63, 0, -1 do -- Sprites draw backwards
 			local base = i*4
 			if OAMRam[base] < 0xEF then
@@ -266,7 +278,6 @@ NES.ppu = {
 				end
 			end
 		end
-		love.graphics.setColor(255, 255, 255, 255)
 	end,
 	reset = function()
 		-- TODO: Reset stuff

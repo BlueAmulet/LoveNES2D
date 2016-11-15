@@ -27,7 +27,8 @@ function love.load()
 	NES.ppu.reset()
 	NES.cpu.reset()
 	
-	NES.canvas = love.graphics.newCanvas(256, 240)
+	NES.screen = love.image.newImageData(256, 240)
+	NES.image = love.graphics.newImage(NES.screen)
 end
 
 -- Emulate one PPU frame
@@ -53,8 +54,9 @@ function love.draw()
 	love.graphics.print("Y: " .. string.format("%02X", NES.cpu.cpu.registers.Y), 10, y) y=y+20
 	love.graphics.print("SP: " .. string.format("$01%02X", NES.cpu.cpu.registers.SP), 10, y) y=y+20
 	love.graphics.print("PC: " .. string.format("$%04X", NES.cpu.cpu.registers.PC), 10, y) y=y+20
-	
-	NES.canvas:renderTo(NES.ppu.draw)
-	
-	love.graphics.draw(NES.canvas, 8, y)
+
+	NES.ppu.draw()
+
+	NES.image:refresh()
+	love.graphics.draw(NES.image, 8, y)
 end
