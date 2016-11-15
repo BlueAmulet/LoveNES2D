@@ -141,7 +141,7 @@ local function writeCtrl(address, value)
 		-- TODO: Faulty Increment?
 		-- TODO: Faulty Writes?
 		OAMRam[_ppu.oamaddr] = value
-		_ppu.oamaddr = (_ppu.oamaddr + 1)%256
+		_ppu.oamaddr = bit.band(_ppu.oamaddr + 1, 0xFF)
 	elseif address == 5 then
 		if not _ppu.camwrite then -- X Address
 			_ppu.camx = value
@@ -151,7 +151,7 @@ local function writeCtrl(address, value)
 		_ppu.camwrite = not _ppu.camwrite
 	elseif address == 6 then
 		if not _ppu.ppuwrite then -- High Byte
-			_ppu.ppuaddr = (value*256) + (_ppu.ppuaddr%256)
+			_ppu.ppuaddr = bit.lshift(value, 8) + bit.band(_ppu.ppuaddr, 0xFF)
 		else -- Low Byte
 			_ppu.ppuaddr = bit.band(_ppu.ppuaddr, 0xFF00) + value
 		end
@@ -171,21 +171,22 @@ local function writeDMA(address, value)
 	local base = value * 256
 	for i = 0, 255 do
 		OAMRam[_ppu.oamaddr] = NES.bus.readByte(base+i)
-		_ppu.oamaddr = (_ppu.oamaddr + 1)%256
+		_ppu.oamaddr = bit.band(_ppu.oamaddr + 1, 0xFF)
 	end
 end
 
 local xscroll
 local yscroll
 local function drawPixel(x, y, pal)
-	x=x+xscroll
-	y=y+yscroll
 	if x>=0 and x<256 and y>=0 and y<240 then
 		NES.screen:setPixel(x, y, pal[1], pal[2], pal[3], 255)
 	end
 end
 
 local function drawCHR(addr, x, y, pal, hflip, vflip)
+	x=x-xscroll
+	y=y-yscroll
+	if x+8<0 or x>=256 or y+8<0 or y>=240 then return end
 	local p1 = palette[NES.pbus.readByte(pal)]
 	local p2 = palette[NES.pbus.readByte(pal+1)]
 	local p3 = palette[NES.pbus.readByte(pal+2)]
@@ -194,8 +195,8 @@ local function drawCHR(addr, x, y, pal, hflip, vflip)
 			--c = ((chr[addr+i] & (1 << n)) >> n) | ((chr[addr+i+8] & (1 << n)) >> (n-1))
 			local c = bit.band(bit.rshift(NES.pbus.readByte(addr+i), n), 1)+bit.band(n > 0 and bit.rshift(NES.pbus.readByte(addr+i+8), n-1) or bit.lshift(NES.pbus.readByte(addr+i+8), 1), 2)
 			if c ~= 0 then
-				local sx = hflip and 0.5+n or 7.5-n
-				local sy = vflip and 7.5-i or 0.5+i
+				local sx = hflip and n or 7-n
+				local sy = vflip and 7-i or i
 				drawPixel(sx+x, sy+y, c == 1 and p1 or c == 2 and p2 or p3)
 			end
 		end
@@ -264,6 +265,8 @@ NES.ppu = {
 				end
 			end
 		end
+		xscroll = 0
+		yscroll = 0
 		for i = 63, 0, -1 do -- Sprites draw backwards
 			local base = i*4
 			if OAMRam[base] < 0xEF then
